@@ -18,32 +18,39 @@ generated project and never contains generated output.
 | `templates/<name>/` | One template: its own `cargo-generate.toml`, placeholders, files. |
 | `templates/README.md` | Human-readable index; keep it in sync with `sub_templates`. |
 | `docs/adding-a-template.md` | Authoring workflow and checklist. |
-| `scripts/check_repo.py` | Repo consistency checks: menu ↔ directories ↔ index, symlink, links, artifacts. |
-| `scripts/validate_all.py` | Runs the skill validator (optionally a smoke test) over every template. |
-| `Makefile` | `check`, `validate`, `smoke` targets; the same commands CI runs. |
-| `.github/workflows/ci.yml` | CI: repo checks, per-template validation matrix, smoke test on `main`. |
+| `scripts/check_repo.py` | Repo consistency checks: menu ↔ directories ↔ index, symlink, hook, links, artifacts. |
+| `scripts/validate_all.py` | Runs the skill validator over every template. |
+| `scripts/harness.py` | Local harness: generates each template, rejects unrendered output, runs `cargo check` and `cargo test`. |
+| `Makefile` | `check`, `validate`, `harness`, `harness-matrix`, `hooks` targets. |
+| `.githooks/pre-commit` | Runs `make check` before each commit; enabled with `make hooks`. |
+| `.github/workflows/ci.yml` | CI: repo checks, per-template validation matrix, harness on `main`. |
 | `.agents/skills/cargo-generate-template-builder/` | Vendored authoring skill, including reference docs and helper scripts. |
 | `.claude/skills/cargo-generate-template-builder` | Symlink to the skill above. |
 
 ## Commands
 
 ```bash
-make check       # repo consistency + static validation of every template
-make validate    # static validation only
-make smoke       # real generation + build for every template
-make help        # list targets
+make check          # repo consistency + static validation (also pre-commit)
+make validate       # static validation only
+make harness        # generate, build, and test every template
+make harness-matrix # also generate each placeholder alternative
+make hooks          # enable the tracked pre-commit hook
+make help           # list targets
 ```
 
 Equivalent scripts, when a single template or a CI-style call is needed:
 
 ```bash
-# repo consistency (menu, index, symlink, links, artifacts)
+# repo consistency (menu, index, symlink, hook, links, artifacts)
 python3 scripts/check_repo.py --strict
 
 # every template, or just one as CI does per matrix entry
 python3 scripts/validate_all.py --strict
 python3 scripts/validate_all.py --strict --only <name>
-python3 scripts/validate_all.py --strict --smoke --only <name>
+
+# generation + build, or generation only, for one template
+python3 scripts/harness.py --template <name>
+python3 scripts/harness.py --template <name> --no-build
 
 # scaffold a new template (refuses to overwrite)
 python3 .agents/skills/cargo-generate-template-builder/scripts/scaffold_template.py \
@@ -62,9 +69,10 @@ generation; `--path` and `--git` must never be combined.
    editing `sub_templates` in the root `cargo-generate.toml` *and* the table in
    `templates/README.md` in the same commit.
 3. **Validate before committing.** `make check` must pass; it runs
-   `check_repo.py --strict` and validates every template with `--strict`. Run
-   `make smoke` when `cargo-generate` and Rust are available; if they are not,
-   say so instead of claiming a runtime test passed.
+   `check_repo.py --strict` and validates every template with `--strict`, and the
+   pre-commit hook runs it automatically after `make hooks`. Run `make harness`
+   when `cargo-generate` and Rust are available; if they are not, say so instead
+   of claiming a runtime test passed.
 4. **Generate outside the repo.** Use a temporary directory (for example
    `/tmp/opencode/...`); never commit an expanded project or a `target/`.
 5. **Declare every variable.** Custom values belong in `[placeholders]` with a
@@ -95,7 +103,7 @@ generation; `--path` and `--git` must never be combined.
 - [ ] template generates cleanly into an empty directory
 - [ ] generated project builds or runs without manual repair
 - [ ] `make check` passes
-- [ ] `make smoke` passes when cargo-generate and Rust are available
+- [ ] `make harness` passes when cargo-generate and Rust are available
 - [ ] root `sub_templates` and `templates/README.md` list the template
 - [ ] no generated artifacts, caches, or `__pycache__` are staged
 - [ ] commit message states which templates changed and why

@@ -14,6 +14,7 @@ Exits 1 on errors, or on warnings too when --strict is given.
 from __future__ import annotations
 
 import argparse
+import os
 import re
 import subprocess
 import sys
@@ -213,6 +214,15 @@ def check_symlink(report: Report) -> None:
         report.error(rel(CLAUDE_LINK), "symlink target does not exist")
 
 
+def check_hooks(report: Report) -> None:
+    hook = ROOT / ".githooks" / "pre-commit"
+    if not hook.is_file():
+        report.error(rel(hook), "missing pre-commit hook")
+        return
+    if not os.access(hook, os.X_OK):
+        report.error(rel(hook), "pre-commit hook is not executable; run chmod +x")
+
+
 def check_links(report: Report) -> None:
     docs = [ROOT / "README.md", ROOT / "AGENTS.md", INDEX]
     docs.extend(sorted((ROOT / "docs").glob("*.md")))
@@ -272,6 +282,7 @@ def main() -> int:
     check_menu(entries, discovered, report)
     check_index(discovered, report)
     check_symlink(report)
+    check_hooks(report)
     check_links(report)
     check_artifacts(report)
 

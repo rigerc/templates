@@ -8,8 +8,8 @@ on:
     - cron: "0 6 * * 1"
   workflow_dispatch:
     inputs:
-      smoke:
-        description: Generate and build every template
+      harness:
+        description: Generate, build, and test every template
         type: boolean
         default: false
 
@@ -68,14 +68,14 @@ jobs:
       - name: Validate template
         run: python3 scripts/validate_all.py --strict --only "${{ matrix.template }}"
 
-  smoke:
-    name: Smoke test ${{ matrix.template }}
+  harness:
+    name: Harness ${{ matrix.template }}
     needs: discover
     if: >-
       needs.discover.outputs.templates != '[]' &&
       (github.event_name == 'push' ||
       github.event_name == 'schedule' ||
-      (github.event_name == 'workflow_dispatch' && inputs.smoke))
+      (github.event_name == 'workflow_dispatch' && inputs.harness))
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -99,5 +99,5 @@ jobs:
             cargo install cargo-generate --version 0.26.0 --locked
           fi
           cargo generate --version
-      - name: Generate and build template
-        run: python3 scripts/validate_all.py --strict --smoke --only "${{ matrix.template }}"
+      - name: Generate, build, and test template
+        run: python3 scripts/harness.py --template "${{ matrix.template }}" --timeout 900

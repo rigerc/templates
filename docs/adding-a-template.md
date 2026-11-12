@@ -65,21 +65,24 @@ Rules that matter most:
 ## 5. Validate before committing
 
 Repo consistency and static validation of every template, no network or Rust
-toolchain needed:
+toolchain needed (this is also what the pre-commit hook runs):
 
 ```bash
 make check
 ```
 
-Real generation and a build, requires `cargo-generate` (v0.26.0+) and Rust:
+Real generation, `cargo check`, and `cargo test`, requires `cargo-generate`
+(v0.26.0+) and Rust:
 
 ```bash
-make smoke
+make harness
 ```
 
 Both must pass before the template is pushed. Generated projects belong in a
 temporary directory, never in this repository. CI runs the same scripts and
 discovers new templates automatically, so no workflow edit is needed.
+
+Enable the hook once per clone with `make hooks`.
 
 ## Checklist
 

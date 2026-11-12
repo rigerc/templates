@@ -23,8 +23,10 @@ first one.
 │   └── adding-a-template.md     # step-by-step authoring guide
 ├── scripts/
 │   ├── check_repo.py            # repo consistency checks
+│   ├── harness.py               # local generate/build/test harness
 │   └── validate_all.py          # runs the skill validator over every template
-├── .github/workflows/ci.yml     # CI: checks, per-template validation, smoke test
+├── .githooks/pre-commit         # runs make check before each commit
+├── .github/workflows/ci.yml     # CI: checks, per-template validation, harness
 ├── Makefile                     # local entry points, identical to CI
 ├── AGENTS.md                    # rules for AI agents working in this repo
 ├── .agents/skills/              # vendored cargo-generate authoring skill
@@ -72,18 +74,35 @@ Everything CI runs is available locally through the Makefile; the workflows call
 the same scripts, so local and CI results cannot drift.
 
 ```bash
-make check     # repo consistency + static validation of every template
-make validate  # static validation only
-make smoke     # real generation and build (needs cargo-generate and Rust)
-make help      # list targets
+make check          # repo consistency + static validation (runs in pre-commit)
+make validate       # static validation only
+make harness        # generate, build, and test every template
+make harness-matrix # also generate each placeholder alternative
+make hooks          # enable the tracked pre-commit hook
+make help           # list targets
 ```
 
 | Command | What it does |
 | --- | --- |
-| `python3 scripts/check_repo.py --strict` | Verifies `sub_templates`, template directories, and the index table agree, the `.claude` symlink is intact, docs links resolve, and no generated artifacts are tracked. |
+| `python3 scripts/check_repo.py --strict` | Verifies `sub_templates`, template directories, and the index table agree, the `.claude` symlink and pre-commit hook are intact, docs links resolve, and no generated artifacts are tracked. |
 | `python3 scripts/validate_all.py --strict` | Runs the vendored validator against every directory under `templates/` that has a `cargo-generate.toml`. |
-| `python3 scripts/validate_all.py --smoke` | Adds a real `cargo generate` run plus a build for each template. |
-| `python3 scripts/validate_all.py --only <name>` | Restricts the run to one template, as CI does per matrix entry. |
+| `python3 scripts/harness.py` | Generates each template into a throwaway directory, rejects unrendered Liquid or leaked `cargo-generate.toml`, then runs `cargo check` and `cargo test`. |
+| `python3 scripts/harness.py --matrix` | Adds one generation per non-default placeholder value. |
+| `python3 scripts/harness.py --template <name> --no-build` | Generation-only run for a single template. |
+
+Failed harness cases keep their working directory and print the path; `--keep`
+keeps successful ones too.
+
+### Git hooks
+
+```bash
+make hooks
+```
+
+Points `core.hooksPath` at `.githooks/`. The pre-commit hook runs `make check`
+(repo consistency plus static validation) and takes about a second. It does not
+run the harness, so commits stay fast; run `make harness` before pushing template
+changes. Hooks are per clone and are not installed automatically.
 
 ### CI
 
@@ -95,9 +114,10 @@ weekly on a schedule:
 2. **Validate** — a matrix over discovered templates, one job each, running the
    static validator with `--strict`. An empty `templates/` passes without
    spawning jobs.
-3. **Smoke test** — the same matrix with real generation and a build. It runs on
-   pushes to `main`, the weekly schedule, and manual dispatch with `smoke`
-   enabled, and is skipped for pull requests to keep them fast.
+3. **Harness** — the same matrix with real generation, `cargo check`, and
+   `cargo test`. It runs on pushes to `main`, the weekly schedule, and manual
+   dispatch with `smoke` enabled, and is skipped for pull requests to keep them
+   fast.
 
 Add a template and CI picks it up automatically; there is no matrix to edit.
 Dependabot keeps the workflow actions current.
@@ -105,8 +125,9 @@ Dependabot keeps the workflow actions current.
 ## Requirements
 
 - `cargo-generate` v0.26.0 or newer (`cargo install cargo-generate --locked`)
-- Rust and Cargo for Rust templates and for the smoke test
+- Rust and Cargo for Rust templates and for the harness
 - Python 3.11+ for the helper scripts
+- `make hooks` once per clone to enable the pre-commit hook
 
 ## Agent support
 
