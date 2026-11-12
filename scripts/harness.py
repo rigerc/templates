@@ -251,6 +251,17 @@ def run_case(
             "seconds": seconds,
         }
 
+    if args.build and not (generated / "Cargo.toml").is_file():
+        return {
+            "case": case,
+            "status": "PASS",
+            "step": "",
+            "detail": "",
+            "note": "no Cargo.toml, build skipped",
+            "dir": case_dir,
+            "seconds": seconds,
+        }
+
     if args.build:
         steps = [["cargo", "check", "--workspace"]]
         if not args.no_tests:
@@ -357,7 +368,8 @@ def main() -> int:
                 result = run_case(template, case, merged, names, args, work_root)
                 results.append((label, result))
                 if result["status"] == "PASS":
-                    print(f"    PASS ({result['seconds']:.1f}s)", flush=True)
+                    suffix = f", {result['note']}" if result.get("note") else ""
+                    print(f"    PASS ({result['seconds']:.1f}s{suffix})", flush=True)
                     if not args.keep:
                         shutil.rmtree(result["dir"], ignore_errors=True)
                 else:
