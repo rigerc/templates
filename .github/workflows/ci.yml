@@ -27,6 +27,7 @@ jobs:
   repo-checks:
     name: Repo consistency
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
@@ -42,6 +43,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       templates: ${{ steps.list.outputs.templates }}
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v7
         with:
@@ -70,6 +72,7 @@ jobs:
       fail-fast: false
       matrix:
         template: ${{ fromJSON(needs.discover.outputs.templates) }}
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
@@ -87,6 +90,7 @@ jobs:
       github.event_name == 'schedule' ||
       (github.event_name == 'workflow_dispatch' && inputs.harness))
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
