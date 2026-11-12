@@ -18,28 +18,36 @@ generated project and never contains generated output.
 | `templates/<name>/` | One template: its own `cargo-generate.toml`, placeholders, files. |
 | `templates/README.md` | Human-readable index; keep it in sync with `sub_templates`. |
 | `docs/adding-a-template.md` | Authoring workflow and checklist. |
+| `scripts/check_repo.py` | Repo consistency checks: menu ↔ directories ↔ index, symlink, links, artifacts. |
+| `scripts/validate_all.py` | Runs the skill validator (optionally a smoke test) over every template. |
+| `Makefile` | `check`, `validate`, `smoke` targets; the same commands CI runs. |
+| `.github/workflows/ci.yml` | CI: repo checks, per-template validation matrix, smoke test on `main`. |
 | `.agents/skills/cargo-generate-template-builder/` | Vendored authoring skill, including reference docs and helper scripts. |
 | `.claude/skills/cargo-generate-template-builder` | Symlink to the skill above. |
 
 ## Commands
 
 ```bash
+make check       # repo consistency + static validation of every template
+make validate    # static validation only
+make smoke       # real generation + build for every template
+make help        # list targets
+```
+
+Equivalent scripts, when a single template or a CI-style call is needed:
+
+```bash
+# repo consistency (menu, index, symlink, links, artifacts)
+python3 scripts/check_repo.py --strict
+
+# every template, or just one as CI does per matrix entry
+python3 scripts/validate_all.py --strict
+python3 scripts/validate_all.py --strict --only <name>
+python3 scripts/validate_all.py --strict --smoke --only <name>
+
 # scaffold a new template (refuses to overwrite)
 python3 .agents/skills/cargo-generate-template-builder/scripts/scaffold_template.py \
   ./templates/<name> --kind bin        # bin | lib | workspace
-
-# static validation, required before every commit
-python3 .agents/skills/cargo-generate-template-builder/scripts/validate_template.py \
-  ./templates/<name> --strict
-
-# real generation + build, requires cargo-generate and Rust
-python3 .agents/skills/cargo-generate-template-builder/scripts/smoke_test.py \
-  ./templates/<name>
-
-# validate every template
-for t in templates/*/; do
-  python3 .agents/skills/cargo-generate-template-builder/scripts/validate_template.py "$t" --strict || exit 1
-done
 ```
 
 Use `cargo generate --path ./templates/<name> --name demo --silent` for manual
@@ -53,8 +61,9 @@ generation; `--path` and `--git` must never be combined.
 2. **Update both indexes.** Adding, renaming, or removing a template means
    editing `sub_templates` in the root `cargo-generate.toml` *and* the table in
    `templates/README.md` in the same commit.
-3. **Validate before committing.** `validate_template.py --strict` must pass. Run
-   `smoke_test.py` when `cargo-generate` and Rust are available; if they are not,
+3. **Validate before committing.** `make check` must pass; it runs
+   `check_repo.py --strict` and validates every template with `--strict`. Run
+   `make smoke` when `cargo-generate` and Rust are available; if they are not,
    say so instead of claiming a runtime test passed.
 4. **Generate outside the repo.** Use a temporary directory (for example
    `/tmp/opencode/...`); never commit an expanded project or a `target/`.
@@ -75,12 +84,18 @@ generation; `--path` and `--git` must never be combined.
    the directory name is the CLI argument users type.
 10. **Docs stay true.** If behavior, paths, or commands change, update
     `README.md`, `templates/README.md`, and this file in the same change.
+11. **CI is the gate, not a suggestion.** Do not weaken, skip, or delete checks
+    in `.github/workflows/ci.yml` to make a change pass, and do not add
+    `continue-on-error` to validation steps. Fix the template or the check
+    instead. Local `make check` and CI run the same scripts, so a green local run
+    is the expected state before pushing.
 
 ## Definition of done
 
 - [ ] template generates cleanly into an empty directory
 - [ ] generated project builds or runs without manual repair
-- [ ] `validate_template.py --strict` passes
+- [ ] `make check` passes
+- [ ] `make smoke` passes when cargo-generate and Rust are available
 - [ ] root `sub_templates` and `templates/README.md` list the template
 - [ ] no generated artifacts, caches, or `__pycache__` are staged
 - [ ] commit message states which templates changed and why

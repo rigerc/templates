@@ -1,0 +1,103 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+    inputs:
+      smoke:
+        description: Generate and build every template
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  repo-checks:
+    name: Repo consistency
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Check repository structure
+        run: python3 scripts/check_repo.py --strict
+      - name: Compile helper scripts
+        run: python3 -m compileall -q scripts .agents/skills/cargo-generate-template-builder
+
+  discover:
+    name: Discover templates
+    runs-on: ubuntu-latest
+    outputs:
+      templates: ${{ steps.list.outputs.templates }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: List templates
+        id: list
+        run: echo "templates=$(python3 scripts/validate_all.py --list-json)" >> "$GITHUB_OUTPUT"
+
+  validate:
+    name: Validate ${{ matrix.template }}
+    needs: discover
+    if: needs.discover.outputs.templates != '[]'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        template: ${{ fromJSON(needs.discover.outputs.templates) }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Validate template
+        run: python3 scripts/validate_all.py --strict --only "${{ matrix.template }}"
+
+  smoke:
+    name: Smoke test ${{ matrix.template }}
+    needs: discover
+    if: >-
+      needs.discover.outputs.templates != '[]' &&
+      (github.event_name == 'push' ||
+      github.event_name == 'schedule' ||
+      (github.event_name == 'workflow_dispatch' && inputs.smoke))
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        template: ${{ fromJSON(needs.discover.outputs.templates) }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Cache cargo-generate binary
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/bin/cargo-generate
+          key: cargo-generate-${{ runner.os }}-0.26.0
+      - name: Install cargo-generate
+        run: |
+          if ! command -v cargo-generate >/dev/null 2>&1; then
+            cargo install cargo-generate --version 0.26.0 --locked
+          fi
+          cargo generate --version
+      - name: Generate and build template
+        run: python3 scripts/validate_all.py --strict --smoke --only "${{ matrix.template }}"

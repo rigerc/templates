@@ -1,13 +1,16 @@
 # templates
 
+[![CI](https://github.com/rigerc/templates/actions/workflows/ci.yml/badge.svg)](https://github.com/rigerc/templates/actions/workflows/ci.yml)
+
 A monorepo of [cargo-generate](https://cargo-generate.github.io/cargo-generate/)
 templates. One repository, one template per directory, one command to generate a
 new project from any of them.
 
 ## Status
 
-The monorepo skeleton is in place; no templates have been added yet. See
-[the authoring guide](docs/adding-a-template.md) to create the first one.
+The monorepo skeleton, local automation, and CI are in place; no templates have
+been added yet. See [the authoring guide](docs/adding-a-template.md) to create the
+first one.
 
 ## Layout
 
@@ -18,6 +21,11 @@ The monorepo skeleton is in place; no templates have been added yet. See
 │   └── README.md                # template index and conventions
 ├── docs/
 │   └── adding-a-template.md     # step-by-step authoring guide
+├── scripts/
+│   ├── check_repo.py            # repo consistency checks
+│   └── validate_all.py          # runs the skill validator over every template
+├── .github/workflows/ci.yml     # CI: checks, per-template validation, smoke test
+├── Makefile                     # local entry points, identical to CI
 ├── AGENTS.md                    # rules for AI agents working in this repo
 ├── .agents/skills/              # vendored cargo-generate authoring skill
 └── .claude/skills/              # symlink to the same skill for Claude clients
@@ -58,21 +66,41 @@ Then follow [docs/adding-a-template.md](docs/adding-a-template.md): configure
 placeholders, write the Liquid files, append the path to `sub_templates`, and add
 a row to the [template index](templates/README.md).
 
-## Validating
+## Automation
 
-Static checks for every template, no Rust toolchain required:
-
-```bash
-for t in templates/*/; do
-  python3 .agents/skills/cargo-generate-template-builder/scripts/validate_template.py "$t" --strict || exit 1
-done
-```
-
-Real generation plus a build, for one template:
+Everything CI runs is available locally through the Makefile; the workflows call
+the same scripts, so local and CI results cannot drift.
 
 ```bash
-python3 .agents/skills/cargo-generate-template-builder/scripts/smoke_test.py ./templates/<name>
+make check     # repo consistency + static validation of every template
+make validate  # static validation only
+make smoke     # real generation and build (needs cargo-generate and Rust)
+make help      # list targets
 ```
+
+| Command | What it does |
+| --- | --- |
+| `python3 scripts/check_repo.py --strict` | Verifies `sub_templates`, template directories, and the index table agree, the `.claude` symlink is intact, docs links resolve, and no generated artifacts are tracked. |
+| `python3 scripts/validate_all.py --strict` | Runs the vendored validator against every directory under `templates/` that has a `cargo-generate.toml`. |
+| `python3 scripts/validate_all.py --smoke` | Adds a real `cargo generate` run plus a build for each template. |
+| `python3 scripts/validate_all.py --only <name>` | Restricts the run to one template, as CI does per matrix entry. |
+
+### CI
+
+`.github/workflows/ci.yml` runs on every push to `main`, every pull request, and
+weekly on a schedule:
+
+1. **Repo consistency** — `check_repo.py --strict` plus a compile check of the
+   Python helpers.
+2. **Validate** — a matrix over discovered templates, one job each, running the
+   static validator with `--strict`. An empty `templates/` passes without
+   spawning jobs.
+3. **Smoke test** — the same matrix with real generation and a build. It runs on
+   pushes to `main`, the weekly schedule, and manual dispatch with `smoke`
+   enabled, and is skipped for pull requests to keep them fast.
+
+Add a template and CI picks it up automatically; there is no matrix to edit.
+Dependabot keeps the workflow actions current.
 
 ## Requirements
 

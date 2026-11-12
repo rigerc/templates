@@ -64,22 +64,22 @@ Rules that matter most:
 
 ## 5. Validate before committing
 
-Static checks, no network or Rust toolchain needed:
+Repo consistency and static validation of every template, no network or Rust
+toolchain needed:
 
 ```bash
-python3 .agents/skills/cargo-generate-template-builder/scripts/validate_template.py \
-  ./templates/<name> --strict
+make check
 ```
 
-Real generation and build, requires `cargo-generate` (v0.26.0+) and Rust:
+Real generation and a build, requires `cargo-generate` (v0.26.0+) and Rust:
 
 ```bash
-python3 .agents/skills/cargo-generate-template-builder/scripts/smoke_test.py \
-  ./templates/<name>
+make smoke
 ```
 
 Both must pass before the template is pushed. Generated projects belong in a
-temporary directory, never in this repository.
+temporary directory, never in this repository. CI runs the same scripts and
+discovers new templates automatically, so no workflow edit is needed.
 
 ## Checklist
 
@@ -90,4 +90,4 @@ temporary directory, never in this repository.
 - [ ] generated project builds (or the non-Rust equivalent runs) unattended
 - [ ] root `sub_templates` updated
 - [ ] `templates/README.md` table updated
-- [ ] `validate_template.py --strict` passes
+- [ ] `make check` passes
