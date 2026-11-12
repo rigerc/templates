@@ -1,0 +1,9 @@
+[template]
+cargo_generate_version = ">=0.26.0"
+
+[placeholders]
+rust_edition = { type = "string", prompt = "Rust edition?", choices = ["2021", "2024"], default = "2021" }
+include_ci = { type = "bool", prompt = "Include GitHub Actions CI?", default = true }
+
+[conditional.'include_ci == false']
+ignore = [".github/workflows/ci.yml"]

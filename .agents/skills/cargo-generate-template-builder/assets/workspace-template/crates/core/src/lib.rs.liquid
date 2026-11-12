@@ -1,0 +1,14 @@
+/// A function exported by the core workspace crate.
+pub fn greeting() -> &'static str {
+    "Hello from {{ crate_name }}_core!"
+}
+
+#[cfg(test)]
+mod tests {
+    use super::greeting;
+
+    #[test]
+    fn returns_greeting() {
+        assert!(!greeting().is_empty());
+    }
+}
