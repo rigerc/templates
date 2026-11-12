@@ -86,7 +86,7 @@ make help           # list targets
 | --- | --- |
 | `python3 scripts/check_repo.py --strict` | Verifies `sub_templates`, template directories, and the index table agree, the `.claude` symlink and pre-commit hook are intact, docs links resolve, and no generated artifacts are tracked. |
 | `python3 scripts/validate_all.py --strict` | Runs the vendored validator against every directory under `templates/` that has a `cargo-generate.toml`. |
-| `python3 scripts/harness.py` | Generates each template into a throwaway directory, rejects unrendered Liquid or leaked `cargo-generate.toml`, then runs `cargo check` and `cargo test`. |
+| `python3 scripts/harness.py` | Generates each template into a throwaway directory, rejects unrendered placeholders or leaked `cargo-generate.toml`, then runs `cargo test`. |
 | `python3 scripts/harness.py --matrix` | Adds one generation per non-default placeholder value. |
 | `python3 scripts/harness.py --template <name> --no-build` | Generation-only run for a single template. |
 
@@ -114,10 +114,15 @@ weekly on a schedule:
 2. **Validate** — a matrix over discovered templates, one job each, running the
    static validator with `--strict`. An empty `templates/` passes without
    spawning jobs.
-3. **Harness** — the same matrix with real generation, `cargo check`, and
-   `cargo test`. It runs on pushes to `main`, the weekly schedule, and manual
-   dispatch with `smoke` enabled, and is skipped for pull requests to keep them
-   fast.
+3. **Harness** — the same matrix with real generation and `cargo test`. It runs
+   on pushes to `main`, the weekly schedule, and manual dispatch with `harness`
+   enabled, and is skipped for pull requests to keep them fast.
+
+The harness job downloads the prebuilt `cargo-generate` binary from the
+project's GitHub releases instead of compiling it with `cargo install`, which
+turns a multi-minute cold job into seconds. On pull requests only templates
+touched by the diff are tested; a change outside `templates/` (root config,
+scripts, skill, workflow) tests every template.
 
 Add a template and CI picks it up automatically; there is no matrix to edit.
 Dependabot keeps the workflow actions current.

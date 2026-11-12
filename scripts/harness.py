@@ -254,7 +254,8 @@ def run_case(
     if args.build:
         steps = [["cargo", "check", "--workspace"]]
         if not args.no_tests:
-            steps.append(["cargo", "test", "--workspace"])
+            # cargo test compiles the same targets as check, so skip the duplicate.
+            steps = [["cargo", "test", "--workspace"]]
         for step in steps:
             code, output, spent = run_command(step, generated, args.timeout)
             seconds += spent

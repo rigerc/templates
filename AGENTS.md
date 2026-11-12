@@ -20,7 +20,7 @@ generated project and never contains generated output.
 | `docs/adding-a-template.md` | Authoring workflow and checklist. |
 | `scripts/check_repo.py` | Repo consistency checks: menu ↔ directories ↔ index, symlink, hook, links, artifacts. |
 | `scripts/validate_all.py` | Runs the skill validator over every template. |
-| `scripts/harness.py` | Local harness: generates each template, rejects unrendered output, runs `cargo check` and `cargo test`. |
+| `scripts/harness.py` | Local harness: generates each template, rejects unrendered output, runs `cargo test`. |
 | `Makefile` | `check`, `validate`, `harness`, `harness-matrix`, `hooks` targets. |
 | `.githooks/pre-commit` | Runs `make check` before each commit; enabled with `make hooks`. |
 | `.github/workflows/ci.yml` | CI: repo checks, per-template validation matrix, harness on `main`. |

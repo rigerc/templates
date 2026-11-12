@@ -36,6 +36,32 @@ def discover() -> list[Path]:
     )
 
 
+def filter_changed(templates: list[Path], ref: str) -> list[Path]:
+    """Keep only templates touched since ref; a shared change keeps everything."""
+    try:
+        result = subprocess.run(
+            ["git", "-C", str(ROOT), "diff", "--name-only", f"{ref}...HEAD"],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+    except (OSError, subprocess.CalledProcessError) as exc:
+        print(
+            f"warning: cannot diff against {ref} ({exc}); listing all templates",
+            file=sys.stderr,
+        )
+        return templates
+
+    changed = [line.strip() for line in result.stdout.splitlines() if line.strip()]
+    if not changed:
+        return []
+    for path in changed:
+        if not path.startswith("templates/"):
+            return templates
+    touched = {path.split("/", 2)[1] for path in changed if path.count("/") >= 2}
+    return [template for template in templates if template.name in touched]
+
+
 def run(command: list[str]) -> int:
     return subprocess.run(command, cwd=ROOT).returncode
 
@@ -53,9 +79,16 @@ def main() -> int:
     parser.add_argument(
         "--list-json", action="store_true", help="print template names as JSON"
     )
+    parser.add_argument(
+        "--changed-since",
+        metavar="REF",
+        help="limit to templates touched since REF; shared changes keep all",
+    )
     args = parser.parse_args()
 
     templates = discover()
+    if args.changed_since:
+        templates = filter_changed(templates, args.changed_since)
 
     if args.list_json:
         print(json.dumps([path.name for path in templates]))

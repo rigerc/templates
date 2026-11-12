@@ -44,12 +44,22 @@ jobs:
       templates: ${{ steps.list.outputs.templates }}
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
       - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
       - name: List templates
         id: list
-        run: echo "templates=$(python3 scripts/validate_all.py --list-json)" >> "$GITHUB_OUTPUT"
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ] && [ -n "$BASE_SHA" ]; then
+            json=$(python3 scripts/validate_all.py --list-json --changed-since "$BASE_SHA")
+          else
+            json=$(python3 scripts/validate_all.py --list-json)
+          fi
+          echo "templates=$json" >> "$GITHUB_OUTPUT"
 
   validate:
     name: Validate ${{ matrix.template }}
@@ -86,18 +96,17 @@ jobs:
       - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
-      - name: Cache cargo-generate binary
-        uses: actions/cache@v6
-        with:
-          path: ~/.cargo/bin/cargo-generate
-          key: cargo-generate-${{ runner.os }}-0.26.0
-      - name: Install cargo-generate
+      - name: Install cargo-generate (prebuilt)
+        env:
+          CARGO_GENERATE_VERSION: "0.26.0"
         run: |
-          if ! command -v cargo-generate >/dev/null 2>&1; then
-            cargo install cargo-generate --version 0.26.0 --locked
-          fi
+          # Prebuilt musl binary from the project's GitHub releases. This is the
+          # same artifact the upstream cargo-generate-action downloads, but at
+          # the version the templates require, with no Docker build and no
+          # source compile.
+          base="https://github.com/cargo-generate/cargo-generate/releases/download"
+          url="$base/v${CARGO_GENERATE_VERSION}/cargo-generate-v${CARGO_GENERATE_VERSION}-x86_64-unknown-linux-musl.tar.gz"
+          curl --proto '=https' --tlsv1.2 -sSfL "$url" | tar xz -C "$HOME/.cargo/bin" cargo-generate
           cargo generate --version
       - name: Generate, build, and test template
         run: python3 scripts/harness.py --template "${{ matrix.template }}" --timeout 900
