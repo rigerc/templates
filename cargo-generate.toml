@@ -1,0 +1,17 @@
+# Root menu for this template monorepo.
+#
+# `cargo generate --git https://github.com/rigerc/templates.git` reads this file
+# and offers the templates listed in `sub_templates`, in order. The first entry
+# is the default choice. Paths are relative to this file.
+#
+# Adding a template:
+#   1. create `templates/<name>/cargo-generate.toml` plus the template contents
+#   2. append `"templates/<name>"` below
+#   3. add a row to `templates/README.md`
+#
+# An empty list is intentional while the monorepo has no templates yet: with no
+# subfolders containing a `cargo-generate.toml`, there is nothing to offer. Do
+# not generate from the repository root itself.
+[template]
+cargo_generate_version = ">=0.26.0"
+sub_templates = []
