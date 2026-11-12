@@ -1,0 +1,16 @@
+{
+  "copier_version": "9.19.1",
+  "files_sha256": {
+    "reference/copier-version.md": "eb161869e840e965a2d0ead1b0fbcb7ea06e8e2bd6819e945c6a24cecd2b7b08",
+    "reference/upstream/LICENSE.copier": "90649212457f6c256f545d8da6b0c5fd160bf694629270551e06fe7882e70a70",
+    "reference/upstream/README.md": "1d6fc580b07d9cc2cd2f139ba51ed110cfe42bd3c7eae1d53b363a2fcc53c2cd",
+    "reference/upstream/configuring.md": "91272c10688582360da46ec9bc7c12fca554e4a5d74034a2cbd53cbf48310b84",
+    "reference/upstream/creating.md": "404c37e7ec8489ea159878fa404da0de83e17dfe362488aef3c60aa6d968457d",
+    "reference/upstream/faq.md": "2c9508aa4561d300a1fa71497db7e65d47bce7e2f412eb25b2a2be155906aeb3",
+    "reference/upstream/generating.md": "522fdd843073c666e8b1d687fa8c939e8984f3520a1cf1de71c761c6d68ec697",
+    "reference/upstream/settings.md": "d7cfcb2bcbb2562e94b4f22e134fc93fb07c6c81a8380db9debb7ca20661968b",
+    "reference/upstream/updating.md": "8b8c5b2f5c71bc7cc5bf450152b41dc6b6f18fedde3d014e7a9564ba286fed2b"
+  },
+  "source": "https://github.com/copier-org/copier",
+  "tag": "v9.19.1"
+}

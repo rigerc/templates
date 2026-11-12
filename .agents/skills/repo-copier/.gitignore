@@ -1,0 +1,12 @@
+# OS Garbage
+*.DS_Store
+Thumbs.db
+
+# Secrets
+*.env
+
+# Project
+.agents/skills/**/
+# Python updater tests
+__pycache__/
+*.py[cod]
